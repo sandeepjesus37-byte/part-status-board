@@ -1,0 +1,4015 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part Status Board</title>
+<style>
+:root{--bg:#f1f2ef;--surface:#fcfcfa;--ink:#1e2a2e;--muted:#5d6c70;--line:#cdd5d3;--steel:#2f6f7a;--steel-soft:#dcebec;--good:#2f7a4f;--good-soft:#dcefe3;--bad:#b3392f;--bad-soft:#f6dcd9;--amber:#b86a12;--amber-soft:#f6e6cf}
+@media (prefers-color-scheme:dark){:root{--bg:#12191b;--surface:#1a2427;--ink:#e4ecea;--muted:#9aaeb2;--line:#324246;--steel:#6fb4bf;--steel-soft:#1f3a40;--good:#6cc08e;--good-soft:#1c3427;--bad:#e58a82;--bad-soft:#3b2220;--amber:#e0a35a;--amber-soft:#3a2d1a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:18px 14px 48px}
+.wrap{max-width:1500px;margin:0 auto}
+h1{margin:0 0 2px;font-size:1.6rem}
+.sub{color:var(--muted);font-size:13px;margin-bottom:12px}
+.bar-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+button,select{font:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:4px;padding:7px 11px;font-size:13px;cursor:pointer}
+.btn.primary{background:var(--steel);border-color:var(--steel);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.msg{font-size:13px;padding:8px 12px;border-radius:4px;margin-bottom:12px}
+.msg.ok{background:var(--good-soft);color:var(--good)}
+.msg.err{background:var(--bad-soft);color:var(--bad)}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 11px}
+.tile b{display:block;font-size:1.4rem;line-height:1.1}
+.tile span{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tile.bad b{color:var(--bad)}.tile.warn b{color:var(--amber)}
+.buckets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.bk{text-align:left;background:var(--steel-soft);border:2px solid transparent;border-radius:8px;padding:9px 11px;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;gap:3px;min-width:0}
+.bk.rework{background:var(--amber-soft)}.bk.scrap{background:var(--bad-soft)}
+.bk.sel{border-color:var(--steel);box-shadow:0 0 0 2px var(--steel-soft)}
+.bk.rework.sel{border-color:var(--amber)}.bk.scrap.sel{border-color:var(--bad)}
+.bk .nm2{font-size:12.5px;font-weight:600;line-height:1.25}
+.bk .cnt{font-size:1.7rem;font-weight:700;line-height:1}
+.bk .ids{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.bk.zero{opacity:.6}
+.open-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:2px 0 8px}
+.open-h h2{margin:0;font-size:1.05rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;align-items:start;margin-bottom:12px}
+.card.rw{border-left:5px solid var(--amber)}
+.rwbox{background:var(--amber-soft);color:var(--ink);border-radius:4px;padding:6px 8px;font-size:12.5px;display:flex;flex-direction:column;gap:2px}
+.rwbox b{color:var(--amber)}
+.bdg{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:9px;margin-right:4px}
+.bdg.rw{background:var(--amber);color:#fff}.bdg.nt{background:var(--steel);color:#fff}
+.grp{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;grid-column:1/-1;margin-top:2px}
+.grp.rw{color:var(--amber)}
+details.notes,details.chartbox{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:13px}
+details.notes summary,details.chartbox summary{cursor:pointer;font-weight:600}
+.nform{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.nform input,.nform select{padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);min-width:0;font-size:13px}
+.nform input[type=text]{grid-column:1/-1}.nform .btn{grid-column:1/-1}
+.nlist{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.nlist li{border-left:3px solid var(--steel);background:var(--steel-soft);padding:6px 9px;border-radius:3px;display:flex;flex-direction:column;gap:2px}
+.nlist li.read{opacity:.6;border-left-color:var(--line);background:transparent}
+.nlist .meta{font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.nlist button{border:0;background:none;color:var(--steel);cursor:pointer;font-size:12px;padding:0;text-decoration:underline}
+.msg .go{margin-left:10px}
+.bdg.hd{background:var(--bad);color:#fff}.bdg.wp{background:var(--steel);color:#fff}
+.opsel,.opnote{padding:3px 4px;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--ink);font-size:12.5px;min-width:0}
+.opnote{width:100%;min-width:130px}
+tr.hold td{background:var(--bad-soft)}tr.wip td{background:var(--amber-soft)}
+.st.h{color:var(--bad)}.st.w{color:var(--amber)}
+.holdflag{font-size:12.5px;background:var(--bad-soft);color:var(--bad);border-radius:4px;padding:4px 8px;font-weight:600}
+.chart{width:100%;max-width:600px;height:auto;display:block}
+.chart text{fill:var(--ink);font-size:12px;font-family:inherit}
+.chart .cn{font-weight:700}
+.chart .b0{fill:var(--steel)}.chart .b1{fill:var(--amber)}.chart .b2{fill:var(--bad)}
+.chart line{stroke:var(--line)}
+.empty{color:var(--muted);font-size:12.5px;padding:6px 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:11px;display:flex;flex-direction:column;gap:7px;min-width:0}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.pid{font-weight:700;background:none;border:0;padding:0;color:var(--ink);cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.nm,.small{color:var(--muted);font-size:12.5px}
+.bars{display:flex;gap:2px}.bars i{flex:1;height:6px;border-radius:2px;background:var(--line)}.bars i.on{background:var(--steel)}.bars.red i.on{background:var(--bad)}
+.k{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.mach{font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.mach select{font-size:12.5px;padding:2px 4px;border:1px solid var(--line);border-radius:3px;background:var(--surface);color:var(--ink)}
+.chg{background:var(--amber-soft);color:var(--amber);font-size:11.5px;padding:1px 6px;border-radius:3px;font-weight:600}
+.badge{display:inline-block;font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px}
+.ok{background:var(--good-soft);color:var(--good)}.fail{background:var(--bad-soft);color:var(--bad)}.wait{background:var(--amber-soft);color:var(--amber)}
+.issue{font-size:12.5px;background:var(--bad-soft);border-left:3px solid var(--bad);padding:6px 8px;border-radius:3px;display:flex;flex-direction:column;gap:3px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.row .btn{flex:1 1 auto;padding:6px 8px}
+.moveto{width:100%;padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);font-size:12.5px}
+.form{border:1px dashed var(--line);border-radius:5px;padding:8px;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.form label{display:flex;gap:6px;align-items:center}
+.form input[type=text]{padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
+.log{margin-top:6px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:13px}
+.log h3{margin:0 0 6px;font-size:.95rem}
+.log ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:14px;z-index:20}
+.sheet{background:var(--surface);border-radius:8px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column}
+.sheet header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.sheet .body{overflow:auto;padding:0 4px 8px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line)}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);position:sticky;top:0;background:var(--surface)}
+tr.done td{color:var(--muted)}tr.now td{background:var(--steel-soft)}tr.bad td{background:var(--bad-soft)}
+.st{font-weight:700}.st.d{color:var(--good)}.st.n{color:var(--steel)}.st.b{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Part Status Board</h1>
+  <div class="sub">Built from the process sheet · demo with fake data · v3 bucket view</div>
+  <div id="root"></div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>const EMBED = {
+  "rows": [{
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 7,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 8,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 9,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 10,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 15,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 16,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A101",
+    "Part name": "Mounting bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 17,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 7,
+    "Stage": "Setup 4",
+    "Operation": "Tap threads",
+    "Feature": "Thread M6",
+    "Tool": "T16 tap",
+    "Tool path": "TP-THR-07",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 9
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 8,
+    "Stage": "Setup 4",
+    "Operation": "Finish face",
+    "Feature": "Surface finish",
+    "Tool": "T3 face mill",
+    "Tool path": "FM-FIN-08",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 11
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 9,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 10,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 15,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 16,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 17,
+    "Stage": "Inspection",
+    "Operation": "Measure thread m6",
+    "Feature": "Thread M6",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 18,
+    "Stage": "Inspection",
+    "Operation": "Measure surface finish",
+    "Feature": "Surface finish",
+    "Tool": "Surface tester",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 19,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 20,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A102",
+    "Part name": "Angle bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 21,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 7,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 8,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 9,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 10,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 15,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 16,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A103",
+    "Part name": "Support bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 17,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 7,
+    "Stage": "Setup 4",
+    "Operation": "Tap threads",
+    "Feature": "Thread M6",
+    "Tool": "T16 tap",
+    "Tool path": "TP-THR-07",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 9
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 8,
+    "Stage": "Setup 4",
+    "Operation": "Finish face",
+    "Feature": "Surface finish",
+    "Tool": "T3 face mill",
+    "Tool path": "FM-FIN-08",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 11
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 9,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 10,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 15,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 16,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 17,
+    "Stage": "Inspection",
+    "Operation": "Measure thread m6",
+    "Feature": "Thread M6",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 18,
+    "Stage": "Inspection",
+    "Operation": "Measure surface finish",
+    "Feature": "Surface finish",
+    "Tool": "Surface tester",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 19,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 20,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A104",
+    "Part name": "Sensor bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 21,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 7,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 8,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 9,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 10,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 15,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 16,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A105",
+    "Part name": "Clamp bracket",
+    "Sub-part of": "",
+    "Qty planned": 7,
+    "Step": 17,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 7,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 8,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 9,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 10,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 15,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 16,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A106",
+    "Part name": "Hinge bracket",
+    "Sub-part of": "",
+    "Qty planned": 9,
+    "Step": 17,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 5,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 6,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 7,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 8,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 9,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 10,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 11,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 12,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A107",
+    "Part name": "Cover bracket",
+    "Sub-part of": "",
+    "Qty planned": 6,
+    "Step": 13,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 7,
+    "Stage": "Setup 4",
+    "Operation": "Tap threads",
+    "Feature": "Thread M6",
+    "Tool": "T16 tap",
+    "Tool path": "TP-THR-07",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 9
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 8,
+    "Stage": "Setup 4",
+    "Operation": "Finish face",
+    "Feature": "Surface finish",
+    "Tool": "T3 face mill",
+    "Tool path": "FM-FIN-08",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 11
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 9,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 10,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 15,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 16,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 17,
+    "Stage": "Inspection",
+    "Operation": "Measure thread m6",
+    "Feature": "Thread M6",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 18,
+    "Stage": "Inspection",
+    "Operation": "Measure surface finish",
+    "Feature": "Surface finish",
+    "Tool": "Surface tester",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 19,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 20,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A108",
+    "Part name": "Corner bracket",
+    "Sub-part of": "",
+    "Qty planned": 8,
+    "Step": 21,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 7,
+    "Stage": "Setup 4",
+    "Operation": "Tap threads",
+    "Feature": "Thread M6",
+    "Tool": "T16 tap",
+    "Tool path": "TP-THR-07",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 9
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 8,
+    "Stage": "Setup 4",
+    "Operation": "Finish face",
+    "Feature": "Surface finish",
+    "Tool": "T3 face mill",
+    "Tool path": "FM-FIN-08",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 11
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 9,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 10,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 15,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 16,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 17,
+    "Stage": "Inspection",
+    "Operation": "Measure thread m6",
+    "Feature": "Thread M6",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 18,
+    "Stage": "Inspection",
+    "Operation": "Measure surface finish",
+    "Feature": "Surface finish",
+    "Tool": "Surface tester",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 19,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 20,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A109",
+    "Part name": "Bearing bracket",
+    "Sub-part of": "",
+    "Qty planned": 5,
+    "Step": 21,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 5,
+    "Stage": "Setup 3",
+    "Operation": "Bore",
+    "Feature": "Bore diameter",
+    "Tool": "T12 end mill",
+    "Tool path": "EM-BOR-05",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 16
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 6,
+    "Stage": "Setup 3",
+    "Operation": "Chamfer edges",
+    "Feature": "Edge chamfer",
+    "Tool": "T15 chamfer tool",
+    "Tool path": "CH-EDG-06",
+    "Planned machine": "HMC-1",
+    "Est. minutes": 8
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 7,
+    "Stage": "Setup 4",
+    "Operation": "Tap threads",
+    "Feature": "Thread M6",
+    "Tool": "T16 tap",
+    "Tool path": "TP-THR-07",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 9
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 8,
+    "Stage": "Setup 4",
+    "Operation": "Finish face",
+    "Feature": "Surface finish",
+    "Tool": "T3 face mill",
+    "Tool path": "FM-FIN-08",
+    "Planned machine": "5AX-1",
+    "Est. minutes": 11
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 9,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 10,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 11,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 12,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 13,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 14,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 15,
+    "Stage": "Inspection",
+    "Operation": "Measure bore diameter",
+    "Feature": "Bore diameter",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 16,
+    "Stage": "Inspection",
+    "Operation": "Measure edge chamfer",
+    "Feature": "Edge chamfer",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 17,
+    "Stage": "Inspection",
+    "Operation": "Measure thread m6",
+    "Feature": "Thread M6",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 18,
+    "Stage": "Inspection",
+    "Operation": "Measure surface finish",
+    "Feature": "Surface finish",
+    "Tool": "Surface tester",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 19,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 20,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110",
+    "Part name": "Frame bracket",
+    "Sub-part of": "",
+    "Qty planned": 10,
+    "Step": 21,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 5,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 6,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 7,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 8,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 9,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 10,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 11,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 12,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-1",
+    "Part name": "Frame bracket spacer",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 13,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 1,
+    "Stage": "Setup 1",
+    "Operation": "Face top",
+    "Feature": "Top face",
+    "Tool": "T2 face mill",
+    "Tool path": "FM-TOP-01",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 12
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 2,
+    "Stage": "Setup 1",
+    "Operation": "Rough outline",
+    "Feature": "Outer profile",
+    "Tool": "T10 end mill",
+    "Tool path": "EM-OUT-02",
+    "Planned machine": "VMC-2",
+    "Est. minutes": 18
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 3,
+    "Stage": "Setup 2",
+    "Operation": "Drill holes",
+    "Feature": "Mounting holes",
+    "Tool": "T9 drill",
+    "Tool path": "DR-HOL-03",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 10
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 4,
+    "Stage": "Setup 2",
+    "Operation": "Machine slot",
+    "Feature": "Slot width",
+    "Tool": "T11 slot cutter",
+    "Tool path": "SL-SLT-04",
+    "Planned machine": "VMC-1",
+    "Est. minutes": 14
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 5,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Deburr and clean",
+    "Feature": "Edges",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Bench-1",
+    "Est. minutes": 15
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 6,
+    "Stage": "Deburr & special treatment",
+    "Operation": "Stress relief",
+    "Feature": "Material condition",
+    "Tool": "Vendor furnace",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 60
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 7,
+    "Stage": "Inspection",
+    "Operation": "Measure top face",
+    "Feature": "Top face",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 8,
+    "Stage": "Inspection",
+    "Operation": "Measure outer profile",
+    "Feature": "Outer profile",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 9,
+    "Stage": "Inspection",
+    "Operation": "Measure mounting holes",
+    "Feature": "Mounting holes",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 10,
+    "Stage": "Inspection",
+    "Operation": "Measure slot width",
+    "Feature": "Slot width",
+    "Tool": "CMM probe",
+    "Tool path": "",
+    "Planned machine": "CMM-1",
+    "Est. minutes": 4
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 11,
+    "Stage": "Coating",
+    "Operation": "Apply coating",
+    "Feature": "Surface coating",
+    "Tool": "Spray line",
+    "Tool path": "",
+    "Planned machine": "Vendor",
+    "Est. minutes": 30
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 12,
+    "Stage": "Assembly",
+    "Operation": "Assemble with fasteners",
+    "Feature": "Fit",
+    "Tool": "Hand tools",
+    "Tool path": "",
+    "Planned machine": "Asm-1",
+    "Est. minutes": 20
+  }, {
+    "Section": "Brackets",
+    "Part id": "BRK-A110-2",
+    "Part name": "Frame bracket plate",
+    "Sub-part of": "BRK-A110",
+    "Qty planned": 10,
+    "Step": 13,
+    "Stage": "Dispatch",
+    "Operation": "Pack and dispatch",
+    "Feature": "Packing",
+    "Tool": "",
+    "Tool path": "",
+    "Planned machine": "Store",
+    "Est. minutes": 10
+  }],
+  "demo": {
+    "BRK-A101": {
+      "stage": "Rework",
+      "qtyMade": 8,
+      "failed": ["Bore diameter"],
+      "decision": "rework",
+      "note": "Bore 0.03 mm over limit on 2 pieces",
+      "back": "Setup 3"
+    },
+    "BRK-A102": {
+      "stage": "Inspection",
+      "qtyMade": 6
+    },
+    "BRK-A103": {
+      "stage": "Setup 2",
+      "qtyMade": 4,
+      "working": {
+        "Setup 2": "VMC-1"
+      }
+    },
+    "BRK-A104": {
+      "stage": "Assembly",
+      "qtyMade": 5
+    },
+    "BRK-A105": {
+      "stage": "Scrap",
+      "qtyMade": 7,
+      "failed": ["Slot width"],
+      "decision": "scrap",
+      "note": "Slot too wide on 1 piece, cannot be recovered"
+    },
+    "BRK-A106": {
+      "stage": "Plan loaded",
+      "qtyMade": 0
+    },
+    "BRK-A107": {
+      "stage": "Setup 1",
+      "qtyMade": 3
+    },
+    "BRK-A108": {
+      "stage": "Dispatch",
+      "qtyMade": 8
+    },
+    "BRK-A109": {
+      "stage": "Deburr & special treatment",
+      "qtyMade": 5
+    },
+    "BRK-A110": {
+      "stage": "Rework",
+      "qtyMade": 10,
+      "failed": ["Mounting holes", "Surface finish"],
+      "decision": "rework",
+      "note": "Two features out of limit, can be reworked",
+      "back": "Setup 2"
+    },
+    "BRK-A110-1": {
+      "stage": "Coating",
+      "qtyMade": 10
+    },
+    "BRK-A110-2": {
+      "stage": "Coating",
+      "qtyMade": 10
+    }
+  }
+};
+const KEY = "psb-v2";
+const START = "Plan loaded";
+const norm = s => String(s == null ? "" : s).trim().toLowerCase();
+const isSetup = s => norm(s).startsWith("setup");
+const isInspect = s => norm(s).includes("inspect");
+
+// Build the whole board from the rows of the process sheet.
+function buildBoard(rows) {
+  if (!rows.length) return {
+    error: "The sheet is empty."
+  };
+  const keyOf = {};
+  Object.keys(rows[0]).forEach(k => {
+    keyOf[norm(k)] = k;
+  });
+  const need = ["part id", "step", "stage", "operation"];
+  const missing = need.filter(n => !keyOf[n]);
+  if (missing.length) return {
+    error: "Missing column(s): " + missing.join(", ") + ". Found: " + Object.keys(rows[0]).join(", ")
+  };
+  const g = (r, n) => keyOf[n] ? r[keyOf[n]] : "";
+  const lanesMid = [];
+  const byPart = new Map();
+  rows.forEach((r, i) => {
+    const pid = String(g(r, "part id")).trim();
+    const stage = String(g(r, "stage")).trim();
+    if (!pid || !stage) return;
+    if (!lanesMid.includes(stage)) lanesMid.push(stage);
+    if (!byPart.has(pid)) byPart.set(pid, {
+      meta: r,
+      steps: []
+    });
+    byPart.get(pid).steps.push({
+      n: Number(g(r, "step")) || i + 1,
+      stage,
+      op: String(g(r, "operation")),
+      feature: String(g(r, "feature")),
+      tool: String(g(r, "tool")),
+      path: String(g(r, "tool path")),
+      machine: String(g(r, "planned machine")),
+      mins: g(r, "est. minutes")
+    });
+  });
+  if (!byPart.size) return {
+    error: "No usable rows. Each row needs a Part id and a Stage."
+  };
+  const machines = [];
+  const parts = [];
+  byPart.forEach((v, pid) => {
+    v.steps.sort((a, b) => a.n - b.n);
+    const route = [];
+    v.steps.forEach(s => {
+      if (!route.includes(s.stage)) route.push(s.stage);
+    });
+    v.steps.forEach(s => {
+      if (isSetup(s.stage) && s.machine && !machines.includes(s.machine)) machines.push(s.machine);
+    });
+    parts.push({
+      partId: pid,
+      name: String(g(v.meta, "part name") || pid),
+      section: String(g(v.meta, "section")),
+      subPartOf: String(g(v.meta, "sub-part of")) || null,
+      qtyPlanned: Number(g(v.meta, "qty planned")) || 0,
+      qtyMade: 0,
+      stage: START,
+      route,
+      steps: v.steps,
+      working: {},
+      inspection: {
+        failed: [],
+        decision: null,
+        note: null,
+        passed: false
+      },
+      back: null,
+      reworked: false
+    });
+  });
+  const setupsSorted = lanesMid.filter(isSetup).sort((a, b) => (parseInt(a.replace(/\D+/g, "")) || 0) - (parseInt(b.replace(/\D+/g, "")) || 0));
+  const others = lanesMid.filter(x => !isSetup(x));
+  const lanes = [START, ...setupsSorted, ...others, "Rework", "Scrap"];
+  return {
+    lanes,
+    parts,
+    machines,
+    ops: rows.length
+  };
+}
+function applyDemo(board, demo) {
+  board.parts.forEach(p => {
+    const d = demo[p.partId];
+    if (!d) return;
+    p.stage = d.stage;
+    p.qtyMade = d.qtyMade || 0;
+    p.working = d.working || {};
+    if (d.failed) p.inspection = {
+      failed: d.failed,
+      decision: d.decision,
+      note: d.note || null,
+      passed: false
+    };
+    if (d.back) p.back = d.back;
+    const ins = p.route.find(isInspect);
+    if (ins && p.route.indexOf(p.stage) > p.route.indexOf(ins)) p.inspection.passed = true;
+  });
+  return board;
+}
+const fullRoute = p => [START, ...p.route];
+const stageIdx = p => fullRoute(p).indexOf(p.stage);
+function returnStage(p, failed) {
+  const ins = p.route.find(isInspect);
+  const limit = ins ? p.route.indexOf(ins) : p.route.length;
+  let best = -1;
+  p.steps.forEach(s => {
+    const si = p.route.indexOf(s.stage);
+    if (si < limit && failed.some(f => norm(f) === norm(s.feature))) {
+      if (best === -1 || si < best) best = si;
+    }
+  });
+  return best === -1 ? p.route[0] : p.route[best];
+}
+const opCount = (p, k) => Object.values(p.opStatus || {}).filter(x => x.s === k).length;
+const inspectName = p => p.route.find(isInspect) || "inspection";
+const isRwJob = p => p.reworked && !p.inspection.passed && p.stage !== "Rework" && p.stage !== "Scrap";
+const TEAMS = ["Programming", "Machining", "Quality", "Tooling", "Planning", "Coating", "Assembly", "Stores"];
+function NotesPanel({
+  stage,
+  notes,
+  onAdd,
+  onToggle
+}) {
+  const [from, setFrom] = React.useState("Machining");
+  const [to, setTo] = React.useState("All teams");
+  const [text, setText] = React.useState("");
+  const mine = notes.filter(n => n.stage === stage);
+  const open = mine.filter(n => !n.read).length;
+  return /*#__PURE__*/React.createElement("details", {
+    className: "notes",
+    key: stage
+  }, /*#__PURE__*/React.createElement("summary", null, "Team notes for ", stage, " \xB7 ", open, " open", mine.length > open ? ", " + (mine.length - open) + " read" : ""), /*#__PURE__*/React.createElement("div", {
+    className: "nform"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: from,
+    onChange: e => setFrom(e.target.value),
+    "aria-label": "From team"
+  }, TEAMS.map(t => /*#__PURE__*/React.createElement("option", {
+    key: t,
+    value: t
+  }, "From: ", t))), /*#__PURE__*/React.createElement("select", {
+    value: to,
+    onChange: e => setTo(e.target.value),
+    "aria-label": "To team"
+  }, ["All teams", ...TEAMS].map(t => /*#__PURE__*/React.createElement("option", {
+    key: t,
+    value: t
+  }, "To: ", t))), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Message for the other team",
+    value: text,
+    onChange: e => setText(e.target.value)
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "btn primary",
+    disabled: !text.trim(),
+    onClick: () => {
+      onAdd(stage, from, to, text.trim());
+      setText("");
+    }
+  }, "Add note")), mine.length === 0 ? /*#__PURE__*/React.createElement("span", {
+    className: "small"
+  }, "No notes yet for this stage.") : /*#__PURE__*/React.createElement("ul", {
+    className: "nlist"
+  }, mine.map(n => /*#__PURE__*/React.createElement("li", {
+    key: n.id,
+    className: n.read ? "read" : ""
+  }, /*#__PURE__*/React.createElement("span", null, n.text), /*#__PURE__*/React.createElement("span", {
+    className: "meta"
+  }, /*#__PURE__*/React.createElement("span", null, n.from, " \u2192 ", n.to, " \xB7 ", n.t), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onToggle(n.id)
+  }, n.read ? "Mark unread" : "Mark read"))))));
+}
+function BucketChart({
+  lanes,
+  count
+}) {
+  const max = Math.max(1, ...lanes.map(count));
+  const L = 150,
+    W = 560,
+    R = 34,
+    rowH = 26,
+    H = lanes.length * rowH + 6;
+  const x = n => n / max * (W - L - R);
+  return /*#__PURE__*/React.createElement("svg", {
+    className: "chart",
+    viewBox: "0 0 " + W + " " + H,
+    role: "img",
+    "aria-label": "Number of parts in each bucket"
+  }, /*#__PURE__*/React.createElement("line", {
+    x1: L,
+    y1: "0",
+    x2: L,
+    y2: H - 4
+  }), lanes.map((l, i) => {
+    const n = count(l),
+      y = i * rowH + 3,
+      cls = l === "Rework" ? "b1" : l === "Scrap" ? "b2" : "b0";
+    return /*#__PURE__*/React.createElement("g", {
+      key: l
+    }, /*#__PURE__*/React.createElement("text", {
+      x: L - 8,
+      y: y + 15,
+      textAnchor: "end"
+    }, l.length > 22 ? l.slice(0, 21) + "…" : l), n > 0 && /*#__PURE__*/React.createElement("rect", {
+      className: cls,
+      x: L,
+      y: y + 2,
+      width: x(n),
+      height: "16",
+      rx: "3"
+    }), /*#__PURE__*/React.createElement("text", {
+      className: "cn",
+      x: L + x(n) + 6,
+      y: y + 15
+    }, n));
+  }));
+}
+const csvCell = v => {
+  const t = String(v == null ? "" : v);
+  return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+};
+function exportCsv(board) {
+  const head = ["Part", "Name", "Section", "Sub-part of", "Stage", "Qty planned", "Qty made", "Planned machine", "Working machine", "Inspection", "Failed features", "Rework tag", "Ops WIP", "Ops on hold", "Hold notes"];
+  const rows = board.parts.map(p => {
+    const hold = Object.values(p.opStatus || {}).filter(o => o.s === "hold");
+    const insp = p.stage === "Scrap" ? "Scrapped" : p.stage === "Rework" ? "Failed, rework" : p.inspection.passed ? "Passed" : p.reworked ? "Re-inspection due" : "Not yet";
+    return [p.partId, p.name, p.section, p.subPartOf || "", p.stage, p.qtyPlanned, p.qtyMade, plannedMachine(p, p.stage), (p.working || {})[p.stage] || plannedMachine(p, p.stage), insp, (p.inspection.failed || []).join("; "), isRwJob(p) ? "Yes" : "", opCount(p, "wip"), hold.length, hold.map(o => o.note).filter(Boolean).join("; ")];
+  });
+  const text = "\uFEFF" + [head, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([text], {
+    type: "text/csv;charset=utf-8"
+  }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "part-status-" + new Date().toISOString().slice(0, 10) + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function plannedMachine(p, stage) {
+  const st = stage === START ? p.route[0] : stage;
+  const s = p.steps.find(x => x.stage === st && x.machine);
+  return s ? s.machine : "";
+}
+function Card({
+  p,
+  machines,
+  onMove,
+  onFail,
+  onBack,
+  onOpen,
+  lane
+}) {
+  const [failing, setFailing] = React.useState(false);
+  const [feats, setFeats] = React.useState([]);
+  const [dec, setDec] = React.useState("rework");
+  const [note, setNote] = React.useState("");
+  const route = fullRoute(p);
+  const idx = stageIdx(p);
+  const inInspect = isInspect(p.stage);
+  const ins = p.route.find(isInspect);
+  const inspectFeatures = ins ? [...new Set(p.steps.filter(s => s.stage === ins).map(s => s.feature))] : [];
+  const showMachine = p.stage === START || isSetup(p.stage);
+  const planned = plannedMachine(p, p.stage);
+  const working = p.working[p.stage] || planned;
+  const rework = p.stage === "Rework";
+  const scrap = p.stage === "Scrap";
+  const barIdx = rework || scrap ? ins ? route.indexOf(ins) : route.length - 1 : idx;
+  const done = !rework && !scrap && idx >= route.length - 1;
+  const rwJob = p.reworked && !p.inspection.passed && !rework && !scrap;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "card" + (rwJob ? " rw" : "")
+  }, rwJob && /*#__PURE__*/React.createElement("div", {
+    className: "rwbox"
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "\u21BA REWORK"), " \xB7 fix: ", p.inspection.failed.join(", ")), p.inspection.note && /*#__PURE__*/React.createElement("span", null, "Note: ", p.inspection.note), /*#__PURE__*/React.createElement("span", {
+    className: "small"
+  }, "Then send on to ", inspectName(p), " again.")), /*#__PURE__*/React.createElement("div", {
+    className: "top"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "pid",
+    onClick: () => onOpen(p.partId),
+    title: "Open process sheet"
+  }, p.partId), /*#__PURE__*/React.createElement("span", {
+    className: "small"
+  }, p.qtyMade, " of ", p.qtyPlanned, " pieces made")), opCount(p, "hold") > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "holdflag"
+  }, "\u23F8 ", opCount(p, "hold"), " operation", opCount(p, "hold") > 1 ? "s" : "", " on hold \xB7 open the process sheet"), opCount(p, "wip") > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "small"
+  }, "\u25D0 ", opCount(p, "wip"), " operation", opCount(p, "wip") > 1 ? "s" : "", " in WIP"), /*#__PURE__*/React.createElement("div", {
+    className: "nm"
+  }, p.name, p.subPartOf ? " · sub-part of " + p.subPartOf : ""), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "bars" + (rework || scrap ? " red" : "")
+  }, route.map((s, i) => /*#__PURE__*/React.createElement("i", {
+    key: s,
+    className: i <= barIdx ? "on" : "",
+    title: s
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "k"
+  }, /*#__PURE__*/React.createElement("span", null, rework ? "Rework" : scrap ? "Scrapped" : "Stage " + (idx + 1) + " of " + route.length), /*#__PURE__*/React.createElement("span", null, rework || scrap ? "stopped at " + (ins || "inspection") : route[idx]))), showMachine && /*#__PURE__*/React.createElement("div", {
+    className: "mach"
+  }, /*#__PURE__*/React.createElement("span", null, "Planned: ", /*#__PURE__*/React.createElement("b", null, planned || "-")), isSetup(p.stage) && /*#__PURE__*/React.createElement("span", null, "Working: ", /*#__PURE__*/React.createElement("select", {
+    value: working,
+    onChange: e => onMove("machine", p.partId, e.target.value)
+  }, [...new Set([planned, ...machines].filter(Boolean))].map(m => /*#__PURE__*/React.createElement("option", {
+    key: m
+  }, m)))), isSetup(p.stage) && working !== planned && /*#__PURE__*/React.createElement("span", {
+    className: "chg"
+  }, "machine changed")), p.reworked && !rework && p.inspection.passed && /*#__PURE__*/React.createElement("div", {
+    className: "small"
+  }, "Reworked earlier: ", p.inspection.failed.join(", ")), p.inspection.passed && !rework && !scrap && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "badge ok"
+  }, "\u2713 Inspection passed")), rework && /*#__PURE__*/React.createElement("div", {
+    className: "issue"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "badge fail"
+  }, "\u2717 Failed: ", p.inspection.failed.join(", ")), p.inspection.note && /*#__PURE__*/React.createElement("span", null, p.inspection.note), /*#__PURE__*/React.createElement("span", null, "Return to: ", /*#__PURE__*/React.createElement("select", {
+    value: p.back || "",
+    onChange: e => onMove("back", p.partId, e.target.value)
+  }, p.route.filter(s => !isInspect(s)).slice(0, p.route.indexOf(ins) >= 0 ? p.route.indexOf(ins) : undefined).map(s => /*#__PURE__*/React.createElement("option", {
+    key: s
+  }, s))))), scrap && /*#__PURE__*/React.createElement("div", {
+    className: "issue"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "badge fail"
+  }, "\u2717 Scrap: ", p.inspection.failed.join(", ")), p.inspection.note && /*#__PURE__*/React.createElement("span", null, p.inspection.note), /*#__PURE__*/React.createElement("span", null, "Cannot move to any process stage.")), rework && /*#__PURE__*/React.createElement("button", {
+    className: "btn primary",
+    onClick: () => onMove("stage", p.partId, p.back, true)
+  }, "Send back to ", p.back), inInspect && !failing && /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn primary",
+    onClick: () => onMove("pass", p.partId)
+  }, "\u2713 Pass"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => {
+      setFailing(true);
+      setFeats([]);
+    }
+  }, "\u2717 Fail...")), inInspect && failing && /*#__PURE__*/React.createElement("div", {
+    className: "form"
+  }, /*#__PURE__*/React.createElement("b", null, "Which features failed?"), inspectFeatures.map(f => /*#__PURE__*/React.createElement("label", {
+    key: f
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: feats.includes(f),
+    onChange: e => setFeats(e.target.checked ? [...feats, f] : feats.filter(x => x !== f))
+  }), f)), /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
+    type: "radio",
+    checked: dec === "rework",
+    onChange: () => setDec("rework")
+  }), "Rework"), /*#__PURE__*/React.createElement("label", null, /*#__PURE__*/React.createElement("input", {
+    type: "radio",
+    checked: dec === "scrap",
+    onChange: () => setDec("scrap")
+  }), "Scrap"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    placeholder: "Note (optional)",
+    value: note,
+    onChange: e => setNote(e.target.value)
+  }), dec === "rework" && feats.length > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "small"
+  }, "Will return to: ", returnStage(p, feats)), /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn primary",
+    disabled: !feats.length,
+    onClick: () => {
+      onFail(p.partId, feats, dec, note);
+      setFailing(false);
+    }
+  }, "Confirm"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => setFailing(false)
+  }, "Cancel"))), !rework && !scrap && !inInspect && !done && /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    disabled: idx <= 0,
+    onClick: () => onMove("stage", p.partId, route[idx - 1])
+  }, "\u25C0 Back"), /*#__PURE__*/React.createElement("button", {
+    className: "btn primary",
+    onClick: () => onMove("stage", p.partId, route[idx + 1])
+  }, "Next \u25B6")), done && /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => onMove("stage", p.partId, route[idx - 1])
+  }, "\u25C0 Back"), /*#__PURE__*/React.createElement("span", {
+    className: "badge ok"
+  }, "Dispatched")), inInspect && !failing && /*#__PURE__*/React.createElement("div", {
+    className: "row"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => onMove("stage", p.partId, route[idx - 1])
+  }, "\u25C0 Back")), !rework && !scrap && /*#__PURE__*/React.createElement("select", {
+    className: "moveto",
+    value: "",
+    onChange: e => {
+      if (e.target.value) onMove("stage", p.partId, e.target.value);
+    }
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "Move to..."), route.filter(s => s !== p.stage).map(s => /*#__PURE__*/React.createElement("option", {
+    key: s
+  }, s))));
+}
+function OpNote({
+  init,
+  onSave
+}) {
+  const [v, setV] = React.useState(init);
+  return /*#__PURE__*/React.createElement("input", {
+    className: "opnote",
+    type: "text",
+    placeholder: "Why / what's needed",
+    value: v,
+    onChange: e => setV(e.target.value),
+    onBlur: () => {
+      if (v !== init) onSave(v);
+    }
+  });
+}
+function SheetModal({
+  p,
+  onClose,
+  onOp
+}) {
+  const route = fullRoute(p);
+  const rework = p.stage === "Rework",
+    scrap = p.stage === "Scrap";
+  const ins = p.route.find(isInspect);
+  const cur = rework || scrap ? ins ? p.route.indexOf(ins) + 1 : route.length : stageIdx(p);
+  const ov = s => (p.opStatus || {})[s.n];
+  const status = s => {
+    const o = ov(s);
+    if (o) return o.s;
+    const si = route.indexOf(s.stage);
+    if ((rework || scrap) && isInspect(s.stage) && p.inspection.failed.some(f => norm(f) === norm(s.feature))) return "bad";
+    if (rework || scrap) return si <= cur ? "done" : "todo";
+    if (si < cur) return "done";
+    if (si === cur) return "now";
+    return "todo";
+  };
+  const total = p.steps.length,
+    doneN = p.steps.filter(s => status(s) === "done").length,
+    wipN = p.steps.filter(s => status(s) === "wip").length,
+    holdN = p.steps.filter(s => status(s) === "hold").length;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "modal",
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sheet",
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, p.partId, " \xB7 ", p.name), /*#__PURE__*/React.createElement("div", {
+    className: "small"
+  }, "Process sheet \xB7 ", doneN, " of ", total, " operations done \xB7 ", total - doneN, " left", wipN ? " · " + wipN + " WIP" : "", holdN ? " · " + holdN + " on hold" : "", " \xB7 now: ", p.stage)), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: onClose
+  }, "Close")), /*#__PURE__*/React.createElement("div", {
+    className: "body"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "#"), /*#__PURE__*/React.createElement("th", null, "Stage"), /*#__PURE__*/React.createElement("th", null, "Operation"), /*#__PURE__*/React.createElement("th", null, "Feature"), /*#__PURE__*/React.createElement("th", null, "Tool"), /*#__PURE__*/React.createElement("th", null, "Machine"), /*#__PURE__*/React.createElement("th", null, "Status"), /*#__PURE__*/React.createElement("th", null, "Set status"), /*#__PURE__*/React.createElement("th", null, "Note"))), /*#__PURE__*/React.createElement("tbody", null, p.steps.map(s => {
+    const st = status(s);
+    const mach = isSetup(s.stage) && p.working[s.stage] && p.working[s.stage] !== s.machine ? p.working[s.stage] + " (planned " + s.machine + ")" : s.machine;
+    return /*#__PURE__*/React.createElement("tr", {
+      key: s.n,
+      className: st === "done" ? "done" : st === "now" ? "now" : st === "bad" ? "bad" : st === "hold" ? "hold" : st === "wip" ? "wip" : ""
+    }, /*#__PURE__*/React.createElement("td", null, s.n), /*#__PURE__*/React.createElement("td", null, s.stage), /*#__PURE__*/React.createElement("td", null, s.op), /*#__PURE__*/React.createElement("td", null, s.feature), /*#__PURE__*/React.createElement("td", null, s.tool), /*#__PURE__*/React.createElement("td", null, mach), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "st " + (st === "done" ? "d" : st === "now" ? "n" : st === "bad" ? "b" : st === "hold" ? "h" : st === "wip" ? "w" : "")
+    }, st === "done" ? "✓ done" : st === "now" ? "● in progress" : st === "bad" ? "✗ failed" : st === "hold" ? "⏸ on hold" : st === "wip" ? "◐ WIP" : "to do")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("select", {
+      className: "opsel",
+      "aria-label": "Status of step " + s.n,
+      value: ov(s) ? ov(s).s : "",
+      onChange: e => onOp(p.partId, s, e.target.value, ov(s) ? ov(s).note : "")
+    }, /*#__PURE__*/React.createElement("option", {
+      value: ""
+    }, "Auto"), /*#__PURE__*/React.createElement("option", {
+      value: "done"
+    }, "Done"), /*#__PURE__*/React.createElement("option", {
+      value: "wip"
+    }, "WIP"), /*#__PURE__*/React.createElement("option", {
+      value: "hold"
+    }, "Hold"))), /*#__PURE__*/React.createElement("td", null, ov(s) ? /*#__PURE__*/React.createElement(OpNote, {
+      key: s.n + (ov(s).note || ""),
+      init: ov(s).note || "",
+      onSave: t => onOp(p.partId, s, ov(s).s, t)
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "small"
+    }, "-")));
+  })))))));
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.parts && s.lanes) return s;
+  } catch (e) {}
+  return null;
+}
+function demoBoard() {
+  const b = applyDemo(buildBoard(EMBED.rows), EMBED.demo);
+  b.parts.forEach(p => {
+    if (p.partId === "BRK-A103") {
+      const st = p.steps.find(x => x.stage === "Setup 2");
+      if (st) p.opStatus = {
+        [st.n]: {
+          s: "hold",
+          note: "Waiting for the bore fixture from Tooling",
+          t: "08:30 AM"
+        }
+      };
+    }
+  });
+  return {
+    ...b,
+    log: [],
+    notes: [{
+      id: "d1",
+      stage: "Setup 2",
+      from: "Quality",
+      to: "Machining",
+      text: "Chamfer on angle brackets is running tight, check tool wear before the next batch.",
+      t: "09:10 AM",
+      read: false
+    }, {
+      id: "d2",
+      stage: "Coating",
+      from: "Planning",
+      to: "Coating",
+      text: "Batch of 2 sub-parts goes out Monday; hold for the vendor slot.",
+      t: "09:40 AM",
+      read: false
+    }],
+    note: "Showing the demo: 12 fake parts, built from the sample process sheet."
+  };
+}
+function App() {
+  const init = React.useMemo(() => load() || demoBoard(), []);
+  const [board, setBoard] = React.useState(init);
+  const [hist, setHist] = React.useState([]);
+  const [open, setOpen] = React.useState(null);
+  const [sel, setSel] = React.useState(null);
+  const notes = board.notes || [];
+  const [msg, setMsg] = React.useState(init.note ? {
+    t: "ok",
+    s: init.note
+  } : null);
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(board));
+    } catch (e) {}
+  }, [board]);
+  const stamp = () => new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  function commit(parts, text) {
+    setHist(h => [...h.slice(-49), board]);
+    setBoard({
+      ...board,
+      parts,
+      log: [{
+        t: stamp(),
+        s: text
+      }, ...board.log].slice(0, 40)
+    });
+  }
+  const upd = (id, fn) => board.parts.map(p => p.partId === id ? fn(p) : p);
+  const get = id => board.parts.find(p => p.partId === id);
+  function onMove(kind, id, val, fromRework) {
+    const p = get(id);
+    if (kind === "machine") return commit(upd(id, q => ({
+      ...q,
+      working: {
+        ...q.working,
+        [q.stage]: val
+      }
+    })), id + ": working machine for " + p.stage + " set to " + val);
+    if (kind === "back") return setBoard({
+      ...board,
+      parts: upd(id, q => ({
+        ...q,
+        back: val
+      }))
+    });
+    if (kind === "pass") {
+      const route = fullRoute(p),
+        next = route[stageIdx(p) + 1];
+      return commit(upd(id, q => ({
+        ...q,
+        stage: next || q.stage,
+        inspection: {
+          ...q.inspection,
+          passed: true
+        }
+      })), id + ": inspection passed, moved to " + next);
+    }
+    if (kind === "stage") {
+      const moving = fromRework;
+      const route = fullRoute(p);
+      const lastSetupIdx = Math.max(...route.map((s, i) => isSetup(s) ? i : -1));
+      const ti = route.indexOf(val);
+      const qty = ti > lastSetupIdx ? p.qtyPlanned : p.qtyMade;
+      commit(upd(id, q => ({
+        ...q,
+        stage: val,
+        qtyMade: qty,
+        reworked: moving ? true : q.reworked,
+        inspection: moving ? {
+          ...q.inspection,
+          passed: false
+        } : q.inspection
+      })), id + ": " + (moving ? "sent back for rework to " : p.stage + " → ") + val);
+      if (moving) {
+        setSel(val);
+        setMsg({
+          t: "ok",
+          s: id + " is now in " + val + " with a REWORK tag (fix: " + p.inspection.failed.join(", ") + "). It is shown first in this bucket."
+        });
+      }
+      return;
+    }
+  }
+  function onOp(id, step, val, note) {
+    const label = id + " step " + step.n + " (" + step.op + (step.feature ? ", " + step.feature : "") + "): ";
+    commit(upd(id, q => {
+      const o = {
+        ...(q.opStatus || {})
+      };
+      if (!val) delete o[step.n];else o[step.n] = {
+        s: val,
+        note: note || "",
+        t: stamp()
+      };
+      return {
+        ...q,
+        opStatus: o
+      };
+    }), label + (val ? "set to " + val.toUpperCase() + (note ? " – " + note : "") : "back to auto"));
+  }
+  function onFail(id, feats, dec, note) {
+    const p = get(id);
+    const back = dec === "rework" ? returnStage(p, feats) : null;
+    commit(upd(id, q => ({
+      ...q,
+      stage: dec === "scrap" ? "Scrap" : "Rework",
+      back,
+      inspection: {
+        failed: feats,
+        decision: dec,
+        note: note || null,
+        passed: false
+      }
+    })), id + ": inspection failed (" + feats.join(", ") + "), " + (dec === "scrap" ? "scrapped" : "to rework, return to " + back));
+    const dest = dec === "scrap" ? "Scrap" : "Rework";
+    setMsg({
+      t: "ok",
+      s: id + " moved to the " + dest + " bucket.",
+      go: dest
+    });
+  }
+  function undo() {
+    if (!hist.length) return;
+    const prev = hist[hist.length - 1];
+    setHist(hist.slice(0, -1));
+    setBoard({
+      ...prev,
+      notes: board.notes || [],
+      log: [{
+        t: stamp(),
+        s: "Undid: " + (board.log[0] ? board.log[0].s : "last move")
+      }, ...board.log].slice(0, 40)
+    });
+  }
+  async function onFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      const wb = XLSX.read(await f.arrayBuffer());
+      const name = wb.SheetNames.find(n => norm(n).includes("process")) || wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {
+        defval: ""
+      });
+      const b = buildBoard(rows);
+      if (b.error) {
+        setMsg({
+          t: "err",
+          s: "Import failed. " + b.error
+        });
+      } else {
+        setHist([]);
+        setBoard({
+          ...b,
+          log: []
+        });
+        setMsg({
+          t: "ok",
+          s: "Imported \"" + f.name + "\": " + b.parts.length + " parts, " + b.ops + " operations, " + (b.lanes.length - 3) + " stages from the sheet. All parts start in Plan loaded."
+        });
+      }
+    } catch (err) {
+      setMsg({
+        t: "err",
+        s: "Could not read that file. Use an .xlsx file with a Process Plan sheet."
+      });
+    }
+    e.target.value = "";
+  }
+  function addNote(stage, from, to, text) {
+    setBoard({
+      ...board,
+      notes: [{
+        id: Date.now() + "" + Math.random(),
+        stage,
+        from,
+        to,
+        text,
+        t: stamp(),
+        read: false
+      }, ...notes]
+    });
+  }
+  function toggleNote(id) {
+    setBoard({
+      ...board,
+      notes: notes.map(n => n.id === id ? {
+        ...n,
+        read: !n.read
+      } : n)
+    });
+  }
+  function reset() {
+    setHist([]);
+    const d = demoBoard();
+    setBoard(d);
+    setMsg({
+      t: "ok",
+      s: d.note
+    });
+  }
+  const inLane = l => board.parts.filter(p => p.stage === l);
+  const prod = board.parts.filter(p => p.stage !== START && p.stage !== "Dispatch" && p.stage !== "Rework" && p.stage !== "Scrap").length;
+  const selB = board.lanes.includes(sel) ? sel : board.lanes.find(l => inLane(l).length) || board.lanes[0];
+  const openPart = open ? get(open) : null;
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "bar-top"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "btn primary",
+    style: {
+      cursor: "pointer"
+    }
+  }, "Import process sheet (.xlsx)", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".xlsx,.xls",
+    onChange: onFile,
+    style: {
+      display: "none"
+    },
+    id: "file"
+  })), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: reset
+  }, "Load demo"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: undo,
+    disabled: !hist.length
+  }, "\u21B6 Undo last move"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: () => exportCsv(board)
+  }, "\u21D3 Export CSV")), msg && /*#__PURE__*/React.createElement("div", {
+    className: "msg " + msg.t
+  }, msg.s, msg.go && /*#__PURE__*/React.createElement("button", {
+    className: "btn go",
+    onClick: () => setSel(msg.go)
+  }, "Open ", msg.go)), /*#__PURE__*/React.createElement("div", {
+    className: "sub",
+    style: {
+      marginBottom: 10
+    }
+  }, board.parts.length, " parts \xB7 ", prod, " in production \xB7 ", inLane("Rework").length, " in rework \xB7 ", inLane("Scrap").length, " scrapped \xB7 ", inLane("Dispatch").length, " dispatched \xB7 ", board.parts.filter(isRwJob).length, " rework jobs in stages \xB7 ", notes.filter(n => !n.read).length, " open notes \xB7 ", board.parts.filter(p => opCount(p, "hold") > 0).length, " with holds"), /*#__PURE__*/React.createElement("details", {
+    className: "chartbox",
+    open: true,
+    style: {
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("summary", null, "Chart: parts in each bucket"), /*#__PURE__*/React.createElement(BucketChart, {
+    lanes: board.lanes,
+    count: l => inLane(l).length
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "buckets"
+  }, board.lanes.map(l => {
+    const ps = inLane(l);
+    return /*#__PURE__*/React.createElement("button", {
+      key: l,
+      className: "bk" + (l === "Rework" ? " rework" : l === "Scrap" ? " scrap" : "") + (l === selB ? " sel" : "") + (ps.length ? "" : " zero"),
+      onClick: () => setSel(l),
+      "aria-pressed": l === selB
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "nm2"
+    }, l), /*#__PURE__*/React.createElement("span", {
+      className: "cnt"
+    }, ps.length), (ps.filter(isRwJob).length > 0 || notes.some(n => n.stage === l && !n.read) || ps.some(p => opCount(p, "hold") > 0)) && /*#__PURE__*/React.createElement("span", null, ps.filter(p => opCount(p, "hold") > 0).length > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "bdg hd"
+    }, "\u23F8 ", ps.filter(p => opCount(p, "hold") > 0).length, " hold"), ps.filter(isRwJob).length > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "bdg rw"
+    }, "\u21BA ", ps.filter(isRwJob).length, " rework"), notes.filter(n => n.stage === l && !n.read).length > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "bdg nt"
+    }, notes.filter(n => n.stage === l && !n.read).length, " note", notes.filter(n => n.stage === l && !n.read).length > 1 ? "s" : "")), /*#__PURE__*/React.createElement("span", {
+      className: "ids"
+    }, ps.length === 0 ? "empty" : ps.slice(0, 3).map(p => p.partId.replace("BRK-", "")).join(", ") + (ps.length > 3 ? " +" + (ps.length - 3) : "")));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "open-h"
+  }, /*#__PURE__*/React.createElement("h2", null, selB, " \xB7 ", inLane(selB).length, " ", inLane(selB).length === 1 ? "part" : "parts"), /*#__PURE__*/React.createElement("span", {
+    className: "small"
+  }, "Tap another bucket above to switch")), /*#__PURE__*/React.createElement(NotesPanel, {
+    stage: selB,
+    notes: notes,
+    onAdd: addNote,
+    onToggle: toggleNote
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "cards"
+  }, inLane(selB).length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "empty"
+  }, "No parts in this bucket."), inLane(selB).some(isRwJob) && /*#__PURE__*/React.createElement("div", {
+    className: "grp rw"
+  }, "\u21BA Rework parts (", inLane(selB).filter(isRwJob).length, ")"), inLane(selB).filter(isRwJob).map(p => /*#__PURE__*/React.createElement(Card, {
+    key: p.partId,
+    p: p,
+    machines: board.machines,
+    onMove: onMove,
+    onFail: onFail,
+    onOpen: setOpen,
+    lane: selB
+  })), inLane(selB).some(isRwJob) && inLane(selB).some(p => !isRwJob(p)) && /*#__PURE__*/React.createElement("div", {
+    className: "grp"
+  }, "Production parts (", inLane(selB).filter(p => !isRwJob(p)).length, ")"), inLane(selB).filter(p => !isRwJob(p)).map(p => /*#__PURE__*/React.createElement(Card, {
+    key: p.partId,
+    p: p,
+    machines: board.machines,
+    onMove: onMove,
+    onFail: onFail,
+    onOpen: setOpen,
+    lane: selB
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "log"
+  }, /*#__PURE__*/React.createElement("h3", null, "Move log"), board.log.length === 0 ? /*#__PURE__*/React.createElement("span", {
+    className: "small"
+  }, "Nothing moved yet. Every move shows here and can be undone.") : /*#__PURE__*/React.createElement("ul", null, board.log.slice(0, 8).map((x, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, x.t, " \xB7 ", x.s)))), openPart && /*#__PURE__*/React.createElement(SheetModal, {
+    p: openPart,
+    onClose: () => setOpen(null),
+    onOp: onOp
+  }));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));</script>
+</body>
+</html>
