@@ -20,6 +20,8 @@ button,select{font:inherit}
 .msg{font-size:13px;padding:8px 12px;border-radius:4px;margin-bottom:12px}
 .msg.ok{background:var(--good-soft);color:var(--good)}
 .msg.err{background:var(--bad-soft);color:var(--bad)}
+.spin{display:inline-block;width:14px;height:14px;margin-right:8px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
 .sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 11px}
 .tile b{display:block;font-size:1.4rem;line-height:1.1}
@@ -3697,6 +3699,7 @@ function App() {
   const [hist, setHist] = React.useState([]);
   const [open, setOpen] = React.useState(null);
   const [sel, setSel] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
   const notes = board.notes || [];
   const [msg, setMsg] = React.useState(init.note ? {
     t: "ok",
@@ -3832,6 +3835,7 @@ function App() {
   async function onFile(e) {
     const f = e.target.files[0];
     if (!f) return;
+    setLoading(true);
     try {
       const wb = XLSX.read(await f.arrayBuffer());
       const name = wb.SheetNames.find(n => norm(n).includes("process")) || wb.SheetNames[0];
@@ -3861,6 +3865,7 @@ function App() {
         s: "Could not read that file. Use an .xlsx file with a Process Plan sheet."
       });
     }
+    setLoading(false);
     e.target.value = "";
   }
   function addNote(stage, from, to, text) {
@@ -3924,7 +3929,7 @@ function App() {
   }, "\u21B6 Undo last move"), /*#__PURE__*/React.createElement("button", {
     className: "btn",
     onClick: () => exportCsv(board)
-  }, "\u21D3 Export CSV")), msg && /*#__PURE__*/React.createElement("div", {
+  }, "\u21D3 Export CSV")), loading && React.createElement("div", { className: "msg ok" }, React.createElement("span", { className: "spin" }), "Reading your sheet..."), msg && /*#__PURE__*/React.createElement("div", {
     className: "msg " + msg.t
   }, msg.s, msg.go && /*#__PURE__*/React.createElement("button", {
     className: "btn go",
